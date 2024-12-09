@@ -1,0 +1,194 @@
+import javax.swing.*;
+import java.awt.*;
+
+public class Main {
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(() -> {
+            JFrame frame = new JFrame("Lista de Tarefas");
+            frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+            frame.setSize(800, 600);
+
+            // Carregar a interface gerada
+            listaDeTarefas listaDeTarefasForm = new listaDeTarefas();
+
+            // Configurar layout
+            JPanel mainPanel = listaDeTarefasForm.getMainPanel();
+            JScrollPane taskScrollPane = listaDeTarefasForm.getTaskScrollPane();
+            JScrollPane taskDetailsPane = listaDeTarefasForm.getTaskDetailsPane();
+
+            frame.setLayout(new BorderLayout());
+            frame.add(mainPanel, BorderLayout.NORTH);    // Painel principal com campo de texto e botão
+            frame.add(taskScrollPane, BorderLayout.WEST); // Lista de tarefas
+            frame.add(taskDetailsPane, BorderLayout.CENTER); // Detalhes da tarefa
+
+            frame.setVisible(true);
+        });
+    }
+}
+
+
+import javax.swing.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+
+public class listaDeTarefas {
+    private JTextField textField1; // Campo de texto para entrada de novas tarefas
+    private JButton vButton;      // Botão para adicionar tarefas
+    private JCheckBox testeCheckBox; // Exemplo de checkbox já adicionado ao layout
+
+    private JPanel mainPanel;     // Painel principal
+
+    // Dependências externas para funcionalidade
+    private ControleLateral controleLateral;
+    private Tarefa tarefa;
+
+    public listaDeTarefas() {
+        // Inicializa as dependências
+        controleLateral = new ControleLateral();
+        tarefa = new Tarefa();
+
+        // Configuração do botão para adicionar tarefas
+        vButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                String taskName = textField1.getText().trim();
+                if (!taskName.isEmpty()) {
+                    controleLateral.addTask(taskName);
+                    textField1.setText(""); // Limpar o campo após adicionar
+                } else {
+                    JOptionPane.showMessageDialog(mainPanel, "Digite o nome da tarefa.", "Aviso", JOptionPane.WARNING_MESSAGE);
+                }
+            }
+        });
+
+        // Exemplo: Checkbox configurado para exibir mensagem ao marcar/desmarcar
+        testeCheckBox.addActionListener(e -> {
+            boolean selected = testeCheckBox.isSelected();
+            JOptionPane.showMessageDialog(mainPanel, selected ? "Checkbox marcado!" : "Checkbox desmarcado!");
+        });
+    }
+
+    public JPanel getMainPanel() {
+        return mainPanel;
+    }
+
+    public JScrollPane getTaskScrollPane() {
+        return controleLateral.getScrollPane();
+    }
+
+    public JScrollPane getTaskDetailsPane() {
+        return tarefa.getScrollPane();
+    }
+}
+
+import javax.swing.*;
+import javax.swing.tree.*;
+
+public class ControleLateral {
+    private JTree tree; // Árvore de tarefas e grupos
+    private DefaultTreeModel treeModel;
+    private DefaultMutableTreeNode rootNode;
+
+    public ControleLateral() {
+        // Criar nó raiz da árvore
+        rootNode = new DefaultMutableTreeNode("Lista de Tarefas");
+        treeModel = new DefaultTreeModel(rootNode);
+
+        // Configurar a árvore
+        tree = new JTree(treeModel);
+        tree.setRootVisible(true); // Mostrar o nó raiz
+        tree.setShowsRootHandles(true); // Adicionar ícones de expansão/colapso
+    }
+
+    public JScrollPane getScrollPane() {
+        return new JScrollPane(tree); // Retornar a barra de rolagem da árvore
+    }
+
+    public DefaultMutableTreeNode getSelectedNode() {
+        // Retorna o nó atualmente selecionado
+        return (DefaultMutableTreeNode) tree.getLastSelectedPathComponent();
+    }
+
+    public void addTask(String taskName) {
+        // Adicionar uma nova tarefa ao nó selecionado (ou ao raiz, se nenhum for selecionado)
+        DefaultMutableTreeNode selectedNode = getSelectedNodeOrRoot();
+        DefaultMutableTreeNode newTask = new DefaultMutableTreeNode(taskName);
+        treeModel.insertNodeInto(newTask, selectedNode, selectedNode.getChildCount());
+    }
+
+    public void addGroup(String groupName) {
+        // Adicionar um novo grupo
+        DefaultMutableTreeNode selectedNode = getSelectedNodeOrRoot();
+        DefaultMutableTreeNode newGroup = new DefaultMutableTreeNode(groupName);
+        treeModel.insertNodeInto(newGroup, selectedNode, selectedNode.getChildCount());
+    }
+
+    public void removeSelected() {
+        // Remover o nó atualmente selecionado, exceto o nó raiz
+        DefaultMutableTreeNode selectedNode = getSelectedNode();
+        if (selectedNode != null && selectedNode != rootNode) {
+            treeModel.removeNodeFromParent(selectedNode);
+        }
+    }
+
+    public void renameSelected(String newName) {
+        // Renomear o nó atualmente selecionado
+        DefaultMutableTreeNode selectedNode = getSelectedNode();
+        if (selectedNode != null && selectedNode != rootNode) {
+            selectedNode.setUserObject(newName);
+            treeModel.nodeChanged(selectedNode);
+        }
+    }
+
+    public void toggleCollapse() {
+        // Alternar entre expandir e colapsar o nó selecionado
+        DefaultMutableTreeNode selectedNode = getSelectedNode();
+        if (selectedNode != null) {
+            TreePath path = new TreePath(selectedNode.getPath());
+            if (tree.isExpanded(path)) {
+                tree.collapsePath(path);
+            } else {
+                tree.expandPath(path);
+            }
+        }
+    }
+
+    private DefaultMutableTreeNode getSelectedNodeOrRoot() {
+        // Retorna o nó selecionado ou o nó raiz se nenhum for selecionado
+        DefaultMutableTreeNode selectedNode = getSelectedNode();
+        return selectedNode != null ? selectedNode : rootNode;
+    }
+}
+
+import javax.swing.*;
+import java.awt.*;
+
+public class Tarefa {
+    private JTextArea taskDetailsArea; // Campo para editar os detalhes da tarefa
+    private JScrollPane scrollPane;
+
+    public Tarefa() {
+        // Configuração da área de texto para os detalhes da tarefa
+        taskDetailsArea = new JTextArea();
+        taskDetailsArea.setLineWrap(true); // Quebra automática de linha
+        taskDetailsArea.setWrapStyleWord(true); // Quebra em palavras inteiras
+
+        // Adicionar barra de rolagem à área de texto
+        scrollPane = new JScrollPane(taskDetailsArea);
+        scrollPane.setPreferredSize(new Dimension(600, 600)); // Tamanho padrão
+    }
+
+    public JScrollPane getScrollPane() {
+        return scrollPane; // Retorna o painel com barra de rolagem
+    }
+
+    public void setTaskDetails(String details) {
+        // Define os detalhes da tarefa
+        taskDetailsArea.setText(details);
+    }
+
+    public String getTaskDetails() {
+        // Obtém os detalhes da tarefa
+        return taskDetailsArea.getText();
+    }
+}
